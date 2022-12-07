@@ -49,6 +49,7 @@ namespace NUTService
         {
             m_server_address = server_address;
             m_tcp_client = new TcpClient();
+            m_tcp_client.ReceiveTimeout = 5000;
         }
 
         ~NUTClient()
@@ -74,6 +75,11 @@ namespace NUTService
 
             string serve_description = ExecuteCommand("VER");
             string protocol_version = ExecuteCommand("NETVER");
+        }
+
+        public bool IsConnected()
+        {
+            return m_tcp_client.Connected;
         }
 
         public void Logout()
@@ -146,6 +152,11 @@ namespace NUTService
             
             string response = m_socket_reader.ReadLine();
 
+            if (response == null)
+            {
+                m_tcp_client.Close();
+                throw new NutException("No response from NUT server");
+            }
             if (response.StartsWith("ERR"))
             {
                 throw new NutException(response);
@@ -166,6 +177,11 @@ namespace NUTService
             while (true)
             {
                 response = m_socket_reader.ReadLine();
+                if (response == null)
+                {
+                    m_tcp_client.Close();
+                    throw new NutException("No response from NUT server");
+                }
                 if (!response.StartsWith("END LIST"))
                 {
                     return_value.Add(response);

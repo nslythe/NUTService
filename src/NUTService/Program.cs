@@ -15,8 +15,7 @@ namespace NUTService
         static void Main(string[] args)
         {
             // getn config
-            // Config.GenDefaultConfig();
-
+            
             Config m_config = Config.Load();
 
             ServiceBase[] ServicesToRun;

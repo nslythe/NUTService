@@ -1,58 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.ServiceProcess;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Timers;
 
 namespace NUTService
 {
-    class Logger
-    {
-        private const string logName = "NUTClientService";
-        private EventLog m_log;
-
-        public Logger(string source)
-        {
-            if (!EventLog.SourceExists(source))
-            {
-                EventLog.CreateEventSource(source, logName);
-            }
-
-            m_log = new EventLog(logName);
-            m_log.Source = source;
-        }
-
-        ~Logger()
-        {
-            m_log.Close();
-        }
-
-        public void Info(string msg)
-        {
-            m_log.WriteEntry(msg, EventLogEntryType.Information);
-        }
-        public void Warn(string msg)
-        {
-            m_log.WriteEntry(msg, EventLogEntryType.Warning);
-        }
-        public void Error(string msg)
-        {
-            m_log.WriteEntry(msg, EventLogEntryType.Error);
-        }
-    }
-
     public partial class NUTService : ServiceBase
     {
         private Logger m_logger;
-        private NUTClient m_client;
-        private bool m_do_stop;
-        private Thread m_thread;
+        private NUTClient m_client = null;
+        private Timer m_timer;
         private Config m_config;
+        private NUTUPS m_ups;
+        private NUTClient.NUTState m_last_state = 0;
+        private NUTClient.NUTState m_current_state = 0;
+
 
         public NUTService()
         {
@@ -61,9 +24,7 @@ namespace NUTService
 
         protected override void OnStart(string[] args)
         {
-            m_do_stop = false;
-
-            m_logger = new Logger("NUTClient - Service");
+            m_logger = new Logger("NUTService");
 
             m_logger.Info($"Loading config from : {Config.GetConfigPath()}");
             try
@@ -77,120 +38,128 @@ namespace NUTService
                 Environment.Exit(1);
             }
 
-            m_client = new NUTClient(m_config.host);
+            m_ups = new NUTUPS(m_config.ups);
 
-            m_thread = new Thread(Run);
-            m_thread.Start();
+            m_timer = new Timer();
+            m_timer.Interval = 10000; // 60 seconds
+            m_timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
+            m_timer.Start();
+            m_logger.Info($"Service started");
         }
 
         private void Connect()
         {
-            while (!m_do_stop)
+            m_last_state = 0;
+            m_current_state = 0;
+
+            try
             {
-                try
-                {
-                    m_client.Connect();
-                    break;
-                }
-                catch (Exception e)
-                {
-                    m_logger.Error($"Unable to connect will retry : {e.Message}");
-                }
-                Thread.Sleep(30000);
+                m_client = null;
+                m_client = new NUTClient(m_config.host);
+                m_client.Connect();
+            }
+            catch (Exception e)
+            {
+                m_logger.Error($"Unable to connect will retry : {e.Message}");
+                throw e;
             }
         }
 
-        private void Run()
+        private void SetUserPassword()
         {
-            m_logger.Info($"Service started");
-            while (!m_do_stop)
+            try
             {
-                Connect();
-                m_logger.Info($"Connected to NUT server {m_config.host}");
-
-                try
-                {
-                    m_client.Username(m_config.username);
-                    m_client.Password(m_config.password);
-                    m_logger.Info($"Username / password accepted by server");
-                }
-                catch (Exception e)
-                {
-                    m_logger.Error($"Failed to set username/password {e.Message}");
-                    break;
-                }
-
-
-                NUTUPS ups = new NUTUPS(m_config.ups);
-
-                try
-                {
-                    m_client.Login(ups);
-                    m_logger.Info($"Login to UPS : {ups.name}");
-                }
-                catch (Exception e)
-                {
-                    m_logger.Error(e.Message);
-                }
-
-                MainLoop(ups);
-
-                Thread.Sleep(3000);
+                m_client.Username(m_config.username);
+                m_client.Password(m_config.password);
+                m_logger.Info($"Username / password accepted by server");
             }
-
-            m_client.Logout();
-            m_logger.Info($"Service stoped");
+            catch (Exception e)
+            {
+                m_logger.Error($"Failed to set username/password {e.Message}");
+                throw e;
+            }
         }
 
-        private void MainLoop(NUTUPS ups)
+        private void Login()
         {
-            NUTClient.NUTState last_state = 0;
-            NUTClient.NUTState current_state = 0;
-
-            while (!m_do_stop)
+            try
             {
-                try
+                m_client.Login(m_ups);
+                m_logger.Info($"Login to UPS : {m_ups.name}");
+            }
+            catch (Exception e)
+            {
+                m_logger.Error(e.Message);
+                throw e;
+            }
+        }
+
+        private void PollAndProcessStates()
+        {
+            try
+            {
+                m_current_state = m_client.GetUPSState(m_ups);
+                if (m_last_state != m_current_state)
                 {
-                    current_state = m_client.GetUPSState(ups);
-                    if (last_state != current_state)
-                    {
-                        m_logger.Info($"{ups.name} state changed {NUTClient.NUTStateToString(last_state)} -> {NUTClient.NUTStateToString(current_state)}");
-                    }
-
-                    if (m_config.shutdown_on_lowe_battery && 
-                        (current_state & NUTClient.NUTState.LB) == NUTClient.NUTState.LB)
-                    {
-                        m_logger.Warn($"UPS state LB (shutdown)");
-                        try
-                        {
-                            Host.Shutdown($"Receive low battery from NUT: {ups.name}@{m_config.host}", m_config.grace_delay);
-                        }
-                        catch (Exception e)
-                        {
-                            m_logger.Error($"Unable to shutdown the system : {e.Message}");
-                        }
-                    }
-
-                    if ((current_state & NUTClient.NUTState.FSD) == NUTClient.NUTState.FSD)
-                    {
-                        m_logger.Warn($"UPS state FSD (Force to shutdown)");
-                        try
-                        {
-                            Host.Shutdown($"Receive force shutdown from NUT: {ups.name}@{m_config.host}", m_config.grace_delay);
-                        }catch(Exception e)
-                        {
-                            m_logger.Error($"Unable to shutdown the system : {e.Message}");
-                        }
-                    }
-
-                    last_state = current_state;
+                    m_logger.Info($"{m_ups.name} state changed {NUTClient.NUTStateToString(m_last_state)} -> {NUTClient.NUTStateToString(m_current_state)}");
                 }
-                catch (Exception e)
+
+                if (m_config.shutdown_on_lowe_battery &&
+                    (m_current_state & NUTClient.NUTState.LB) == NUTClient.NUTState.LB)
                 {
-                    m_logger.Error(e.Message);
-                    break;
+                    m_logger.Warn($"UPS state LB (shutdown)");
+                    try
+                    {
+                        Host.Shutdown($"Receive low battery from NUT: {m_ups.name}@{m_config.host}", m_config.grace_delay);
+                        m_logger.Info($"Shutdown command executed");
+                    }
+                    catch (Exception e)
+                    {
+                        m_logger.Error($"Unable to shutdown the system : {e.Message}");
+                    }
                 }
-                Thread.Sleep(3000);
+
+                if ((m_current_state & NUTClient.NUTState.FSD) == NUTClient.NUTState.FSD)
+                {
+                    m_logger.Warn($"UPS state FSD (Force to shutdown)");
+                    try
+                    {
+                        Host.Shutdown($"Receive force shutdown from NUT: {m_ups.name}@{m_config.host}", m_config.grace_delay);
+                        m_logger.Info($"Shutdown command executed");
+                    }
+                    catch (Exception e)
+                    {
+                        m_logger.Error($"Unable to shutdown the system : {e.Message}");
+                    }
+                }
+
+                m_last_state = m_current_state;
+            }
+            catch (Exception e)
+            {
+                m_logger.Error(e.Message);
+                throw e;
+            }
+        }
+
+        private void OnTimer(object sender, ElapsedEventArgs args)
+        {
+            m_timer.Enabled = false;
+            try
+            {
+                if (m_client == null || !m_client.IsConnected())
+                {
+                    Connect();
+                    m_logger.Info($"Connected to NUT server {m_config.host}");
+                    SetUserPassword();
+                    Login();
+                }
+
+                PollAndProcessStates();
+            }
+            finally
+            {
+                m_timer.Enabled = true;
             }
         }
 
@@ -198,8 +167,10 @@ namespace NUTService
         protected override void OnStop()
         {
             m_logger.Info($"Service stoping");
-            m_do_stop = true;
-            m_thread.Join();
+            m_timer.Stop();
+            
+            //TODO: wait call finished
+            m_logger.Info($"Service stoped");
         }
     }
 }

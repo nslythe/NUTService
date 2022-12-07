@@ -8,10 +8,8 @@ namespace NUTService
 {
     internal class NutException : Exception
     {
-        private string m_message;
-        public NutException(string msg)
+        public NutException(string msg) : base(msg)
         {
-            m_message = msg;
         }
     }
 }

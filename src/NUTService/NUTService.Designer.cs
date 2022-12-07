@@ -34,7 +34,7 @@
             this.CanHandlePowerEvent = true;
             this.CanHandleSessionChangeEvent = true;
             this.CanShutdown = true;
-            this.ServiceName = "Service1";
+            this.ServiceName = "NUTService";
 
         }
 
