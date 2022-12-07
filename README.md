@@ -2,7 +2,7 @@
 Windows service to communicate with NUT server (Like NUTClient on linux)
 
 ## Configuration
-`
+```
 {
   "host": "192.168.0.1",  
   "ups": "ups",
@@ -10,7 +10,8 @@ Windows service to communicate with NUT server (Like NUTClient on linux)
   "password": "pass",
   "grace_delay": 30,
   "shutdown_on_low_battery": false
-}`
+}
+```
 
 | variable name | description |
 |---|---|
