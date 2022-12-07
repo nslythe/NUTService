@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product 
+    Id="*"
+    Name="NUTService"
+    Language="1033"
+    Version="1.0.0.0"
+    Manufacturer="NUTService.org"
+    UpgradeCode="484f098e-8894-4638-8a1d-c039ce87a6de">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes"/>
+
+		<Feature Id="ProductFeature" Title="NUTService" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="NUTService" />
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="Newtonsoft_json_dll_component">
+          <File Id="Newtonsoft_json_dll_file" Name="Newtonsoft.Json.dll" Source="$(var.NUTService.TargetDir)\Newtonsoft.Json.dll" DiskId="1" />
+      </Component>
+      
+      <Component Id="NUTService_component">
+        <File Id="NUTService_executable_file" Name="$(var.NUTService.TargetFileName)" Source="$(var.NUTService.TargetPath)" DiskId="1"  KeyPath='yes'/>
+        <File Id="NUTService_executable_config_file" Name="$(var.NUTService.TargetFileName).config" Source="$(var.NUTService.TargetPath).config" DiskId="1"/>
+        <ServiceInstall
+          Id="NUTService_service_installer"
+          Type="ownProcess"
+          Name="NUTService"
+          DisplayName="NUTService"
+          Description="NUT client service"
+          Start="auto"
+          ErrorControl="normal"/>
+        <ServiceControl Id="NUTService_start_service" Start="install" Stop="both" Remove="uninstall" Name="NUTService" Wait="yes" />
+      </Component>      
+		</ComponentGroup>
+	</Fragment>
+</Wix>

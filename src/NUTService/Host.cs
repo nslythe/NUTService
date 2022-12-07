@@ -18,7 +18,9 @@ namespace NUTService
         public static void Shutdown(string msg, uint grace)
         {
             uint return_code = InitiateShutdown(Environment.MachineName, msg, grace, 1, 0x00060000);
-            if (return_code != 0)
+
+            // 1190 = ERROR_SHUTDOWN_IS_SCHEDULED
+            if (return_code != 0 && return_code != 1190)
             {
                 throw new Exception($"{return_code}");
             }

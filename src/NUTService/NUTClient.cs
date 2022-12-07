@@ -18,13 +18,23 @@ namespace NUTService
         [Flags]
         public enum NUTState
         {
-            OL = 1,         // Online
-            OB = 2,         // On battery
-            DISCHRG = 4,    // Discharging
-            CHRG = 8,       // Charging
-            LB = 16,        // Low battery
-            FSD = 32        // Force shutdown
+            UNKNOWN = 1,
+            OL = 2,         // Online           - OK
+            OB = 4,         // On battery       - WARNING
+            DISCHRG = 8,    // Discharging      - WARNING
+            CHRG = 16,       // Charging         - OK
+            LB = 32,        // Low battery      - CRITICAL
+            FSD = 64        // Force shutdown   - CRITICAL
         }
+
+        public enum NUTAlarmState
+        {
+            OK,
+            WARNING,
+            CRITICAL
+        }
+
+
         public static  string NUTStateToString(NUTState state)
         {
             List<string> state_list = new List<string>();
@@ -37,6 +47,28 @@ namespace NUTService
             }
             return String.Join(", ", state_list);
         }
+
+        public static NUTAlarmState NUTStateToAlarmState(NUTState state)
+        {
+            if (
+                (state & NUTState.LB) != 0 ||
+                (state & NUTState.FSD) != 0
+            )
+            {
+                return NUTAlarmState.CRITICAL;
+            }
+
+            if (
+                (state & NUTState.DISCHRG) != 0 ||
+                (state & NUTState.OB) != 0
+            )
+            {
+                return NUTAlarmState.WARNING;
+            }
+            
+            return NUTAlarmState.OK;
+        }
+
 
         const int NUT_SERVER_PORT = 3493;
 
