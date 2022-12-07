@@ -2,6 +2,10 @@
 Windows service to communicate with NUT server (Like NUTClient on linux)
 
 ## Configuration
+At startup if no config file `config.json` is present in installation folder `C:\Program Files (x86)\NUTService` a new template file named `config.json.template` will be created by the service.
+
+You can modify this file acording to the instruction here and rename the file `config.json`, the service will automaticaly relaod the config file.
+
 ```
 {
   "host": "192.168.0.1",  
@@ -13,7 +17,7 @@ Windows service to communicate with NUT server (Like NUTClient on linux)
 }
 ```
 
-| variable name | description |
+| Variable | Description |
 |---|---|
 | host | host address of the NUT server, can be his FQDN or IP |
 | ups | name of the ups to use |
