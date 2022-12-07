@@ -169,7 +169,7 @@ namespace NUTService
 
         internal void Loop()
         {
-            if (m_config!= null && m_config.NeedReload)
+            if (m_config != null && m_config.NeedReload)
             {
                 m_logger.Info($"Config modified will reload");
             }
