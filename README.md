@@ -24,7 +24,7 @@ You can modify this file acording to the instruction here and rename the file `c
 | username | username to use for communication |
 | password | password to use for communication |
 | grace_delay | time before the system ois stopped, the user on the system will use this time to close their application |
-| shutdown_on_low_battery | by default NUTService wait for FSD from NUT server to shutdown the system, if thus variable is true the shutdown will append on low battery notification from NUT |
+| shutdown_on_low_battery | by default NUTService wait for FSD from NUT server to shutdown the system, if this variable is true the shutdown will append on low battery notification from NUT |
 
 ## Logs
 All logs for this service will be in windows event logs in the log names NUTService.
