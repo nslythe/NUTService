@@ -28,3 +28,6 @@ You can modify this file acording to the instruction here and rename the file `c
 
 ## Logs
 All logs for this service will be in windows event logs in the log names NUTService.
+
+## Link
+- [NUT](https://networkupstools.org/)
