@@ -1,5 +1,5 @@
 # NUTService
-Windows service to communicate with NUT server (Like NUTClient on linux)
+Windows service to communicate with NUT server (Like NUTClient on linux) and initiate safe shutdown when UPS force shutdown or low battery depending on your settings.
 
 ## Configuration
 At startup if no config file `config.json` is present in installation folder `C:\Program Files (x86)\NUTService` a new template file named `config.json.template` will be created by the service.
