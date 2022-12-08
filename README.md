@@ -20,13 +20,13 @@ You can edit this file using the instruction below and rename the file `config.j
 ```
 
 | Variable | Description | Default value |
-|---|---|
+|---|---|---|
 | host | The host address of the NUT server, can be his FQDN or IP | null |
 | ups | The name of the ups to use | null |
 | username | Username to use for communication | "" |
 | password | Password to use for communication | "" |
 | grace_delay | Time before the system is shutdown, the user on the system will use this time to close their applications | 30 |
-| shutdown_on_low_battery | By default NUTService wait until FSD is set from the NUT server to shutdown the system, if this variable is true the shutdown will append earlier on low battery notification from NUT | false|
+| shutdown_on_low_battery | By default NUTService wait until FSD is set from the NUT server to shutdown the system, if this variable is true the shutdown will append earlier on low battery notification from NUT | false |
 
 ## Logs
 All logs for this service are in windows event logs in the log names NUTService.
